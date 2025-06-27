@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>批发客户分类预测</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .input-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        .btn:hover {
+            background-color: #2980b9;
+        }
+        .result-section {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            display: none;
+        }
+        .cluster-card {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            background-color: white;
+            margin-top: 20px;
+        }
+        .cluster-card h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .cluster-0 {
+            border-left: 5px solid #3498db;
+        }
+        .cluster-1 {
+            border-left: 5px solid #e74c3c;
+        }
+        .description {
+            margin-top: 10px;
+            font-style: italic;
+            color: #7f8c8d;
+        }
+        .chart-container {
+            width: 100%;
+            height: 300px;
+            margin: 20px 0;
+        }
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .comparison-table th, .comparison-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .comparison-table th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>批发客户分类预测</h1>
+        <p>输入客户特征数据，系统将预测客户所属分类并提供分析结果。</p>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <label for="fresh">新鲜食品年消费量</label>
+                <input type="number" id="fresh" placeholder="例如: 5000">
+            </div>
+            <div class="input-group">
+                <label for="milk">牛奶年消费量</label>
+                <input type="number" id="milk" placeholder="例如: 2000">
+            </div>
+            <div class="input-group">
+                <label for="grocery">杂货年消费量</label>
+                <input type="number" id="grocery" placeholder="例如: 3000">
+            </div>
+            <div class="input-group">
+                <label for="frozen">冷冻食品年消费量</label>
+                <input type="number" id="frozen" placeholder="例如: 1000">
+            </div>
+            <div class="input-group">
+                <label for="detergents">洗涤剂/纸年消费量</label>
+                <input type="number" id="detergents" placeholder="例如: 500">
+            </div>
+            <div class="input-group">
+                <label for="delicassen">熟食年消费量</label>
+                <input type="number" id="delicassen" placeholder="例如: 800">
+            </div>
+        </div>
+        
+        <button class="btn" onclick="predictCluster()">预测分类</button>
+        <button class="btn" onclick="resetForm()">重置</button>
+        
+        <div id="result" class="result-section">
+            <h2>预测结果</h2>
+            <p>该客户被分类为: <strong id="cluster-name">聚类簇 0</strong></p>
+            
+            <div id="cluster-info" class="cluster-card cluster-0">
+                <h3>聚类特征分析</h3>
+                <div class="chart-container" id="radarChart"></div>
+                
+                <div class="description">
+                    <p id="cluster-description">这是一个以高杂货和洗涤剂/纸消费为特征的客户群体，通常代表超市或便利店。</p>
+                </div>
+            </div>
+            
+            <h3>与聚类中心的比较</h3>
+            <table class="comparison-table">
+                <tr>
+                    <th>特征</th>
+                    <th>您的客户</th>
+                    <th>聚类中心</th>
+                    <th>差异</th>
+                </tr>
+                <tr>
+                    <td>新鲜食品</td>
+                    <td id="comp-fresh">5000</td>
+                    <td id="center-fresh">4000</td>
+                    <td id="diff-fresh">+1000</td>
+                </tr>
+                <tr>
+                    <td>牛奶</td>
+                    <td id="comp-milk">2000</td>
+                    <td id="center-milk">7900</td>
+                    <td id="diff-milk">-5900</td>
+                </tr>
+                <tr>
+                    <td>杂货</td>
+                    <td id="comp-grocery">3000</td>
+                    <td id="center-grocery">12100</td>
+                    <td id="diff-grocery">-9100</td>
+                </tr>
+                <tr>
+                    <td>冷冻食品</td>
+                    <td id="comp-frozen">1000</td>
+                    <td id="center-frozen">952</td>
+                    <td id="diff-frozen">+48</td>
+                </tr>
+                <tr>
+                    <td>洗涤剂/纸</td>
+                    <td id="comp-detergents">500</td>
+                    <td id="center-detergents">4561</td>
+                    <td id="diff-detergents">-4061</td>
+                </tr>
+                <tr>
+                    <td>熟食</td>
+                    <td id="comp-delicassen">800</td>
+                    <td id="center-delicassen">1036</td>
+                    <td id="diff-delicassen">-236</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 聚类中心数据
+        const clusterCenters = [
+            { // 聚类簇0
+                name: "超市/便利店",
+                fresh: 4000,
+                milk: 7900,
+                grocery: 12100,
+                frozen: 952,
+                detergents: 4561,
+                delicassen: 1036,
+                description: "这是一个以高杂货和洗涤剂/纸消费为特征的客户群体，通常代表超市或便利店。这类客户的特点是日常消费品采购量大，特别是包装食品和日用品。"
+            },
+            { // 聚类簇1
+                name: "餐馆/酒店",
+                fresh: 8800,
+                milk: 1900,
+                grocery: 2400,
+                frozen: 2080,
+                detergents: 352,
+                delicassen: 1170,
+                description: "这是一个以高新鲜食品消费为特征的客户群体，通常代表餐馆、酒店等餐饮企业。这类客户的特点是新鲜食材需求大，但包装食品和日用品需求相对较少。"
+            }
+        ];
+
+        // 预测分类函数
+        function predictCluster() {
+            // 获取输入值
+            const fresh = parseFloat(document.getElementById('fresh').value) || 0;
+            const milk = parseFloat(document.getElementById('milk').value) || 0;
+            const grocery = parseFloat(document.getElementById('grocery').value) || 0;
+            const frozen = parseFloat(document.getElementById('frozen').value) || 0;
+            const detergents = parseFloat(document.getElementById('detergents').value) || 0;
+            const delicassen = parseFloat(document.getElementById('delicassen').value) || 0;
+            
+            // 简单的分类逻辑 - 实际应用中这里应该是调用模型API
+            // 这里使用基于洗涤剂/纸和杂货消费量的简单规则
+            let clusterIndex = 0;
+            if ((detergents < 1000 && grocery < 5000) || (fresh > 7000 && detergents < 1000)) {
+                clusterIndex = 1;
+            }
+            
+            // 显示结果
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('cluster-name').textContent = `聚类簇 ${clusterIndex} (${clusterCenters[clusterIndex].name})`;
+            
+            // 更新聚类信息卡片
+            const clusterCard = document.getElementById('cluster-info');
+            clusterCard.className = `cluster-card cluster-${clusterIndex}`;
+            document.getElementById('cluster-description').textContent = clusterCenters[clusterIndex].description;
+            
+            // 更新比较表格
+            updateComparisonTable(clusterIndex, fresh, milk, grocery, frozen, detergents, delicassen);
+            
+            // 这里应该添加图表渲染代码，实际应用中可以使用Chart.js等库
+            // renderRadarChart(clusterIndex, fresh, milk, grocery, frozen, detergents, delicassen);
+        }
+        
+        // 更新比较表格
+        function updateComparisonTable(clusterIndex, fresh, milk, grocery, frozen, detergents, delicassen) {
+            const center = clusterCenters[clusterIndex];
+            
+            // 更新客户值
+            document.getElementById('comp-fresh').textContent = fresh;
+            document.getElementById('comp-milk').textContent = milk;
+            document.getElementById('comp-grocery').textContent = grocery;
+            document.getElementById('comp-frozen').textContent = frozen;
+            document.getElementById('comp-detergents').textContent = detergents;
+            document.getElementById('comp-delicassen').textContent = delicassen;
+            
+            // 更新聚类中心值
+            document.getElementById('center-fresh').textContent = center.fresh;
+            document.getElementById('center-milk').textContent = center.milk;
+            document.getElementById('center-grocery').textContent = center.grocery;
+            document.getElementById('center-frozen').textContent = center.frozen;
+            document.getElementById('center-detergents').textContent = center.detergents;
+            document.getElementById('center-delicassen').textContent = center.delicassen;
+            
+            // 计算并更新差异
+            document.getElementById('diff-fresh').textContent = formatDiff(fresh - center.fresh);
+            document.getElementById('diff-milk').textContent = formatDiff(milk - center.milk);
+            document.getElementById('diff-grocery').textContent = formatDiff(grocery - center.grocery);
+            document.getElementById('diff-frozen').textContent = formatDiff(frozen - center.frozen);
+            document.getElementById('diff-detergents').textContent = formatDiff(detergents - center.detergents);
+            document.getElementById('diff-delicassen').textContent = formatDiff(delicassen - center.delicassen);
+        }
+        
+        // 格式化差异显示
+        function formatDiff(diff) {
+            if (diff > 0) return `+${diff}`;
+            if (diff < 0) return `${diff}`;
+            return "0";
+        }
+        
+        // 重置表单
+        function resetForm() {
+            document.getElementById('fresh').value = '';
+            document.getElementById('milk').value = '';
+            document.getElementById('grocery').value = '';
+            document.getElementById('frozen').value = '';
+            document.getElementById('detergents').value = '';
+            document.getElementById('delicassen').value = '';
+            document.getElementById('result').style.display = 'none';
+        }
+        
+        // 这里可以添加实际的图表渲染函数
+        // 实际应用中需要引入Chart.js等库
+        /*
+        function renderRadarChart(clusterIndex, fresh, milk, grocery, frozen, detergents, delicassen) {
+            // 图表渲染代码
+        }
+        */
+    </script>
+</body>
+</html>
