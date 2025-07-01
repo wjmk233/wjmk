@@ -152,85 +152,14 @@
             <div id="cluster-info" class="cluster-card cluster-0">
                 <h3>聚类特征分析</h3>
                 
-                
                 <div class="description">
                     <p id="cluster-description">这是一个以高杂货和洗涤剂/纸消费为特征的客户群体，通常代表超市或便利店。</p>
                 </div>
             </div>
-            
-            <h3>与聚类中心的比较</h3>
-            <table class="comparison-table">
-                <tr>
-                    <th>特征</th>
-                    <th>您的客户</th>
-                    <th>聚类中心</th>
-                    <th>差异</th>
-                </tr>
-                <tr>
-                    <td>新鲜食品</td>
-                    <td id="comp-fresh">5000</td>
-                    <td id="center-fresh">4000</td>
-                    <td id="diff-fresh">+1000</td>
-                </tr>
-                <tr>
-                    <td>牛奶</td>
-                    <td id="comp-milk">2000</td>
-                    <td id="center-milk">7900</td>
-                    <td id="diff-milk">-5900</td>
-                </tr>
-                <tr>
-                    <td>杂货</td>
-                    <td id="comp-grocery">3000</td>
-                    <td id="center-grocery">12100</td>
-                    <td id="diff-grocery">-9100</td>
-                </tr>
-                <tr>
-                    <td>冷冻食品</td>
-                    <td id="comp-frozen">1000</td>
-                    <td id="center-frozen">952</td>
-                    <td id="diff-frozen">+48</td>
-                </tr>
-                <tr>
-                    <td>洗涤剂/纸</td>
-                    <td id="comp-detergents">500</td>
-                    <td id="center-detergents">4561</td>
-                    <td id="diff-detergents">-4061</td>
-                </tr>
-                <tr>
-                    <td>熟食</td>
-                    <td id="comp-delicassen">800</td>
-                    <td id="center-delicassen">1036</td>
-                    <td id="diff-delicassen">-236</td>
-                </tr>
-            </table>
         </div>
     </div>
 
     <script>
-        // 聚类中心数据
-        const clusterCenters = [
-            { // 聚类簇0
-                name: "超市/便利店",
-                fresh: 4000,
-                milk: 7900,
-                grocery: 12100,
-                frozen: 952,
-                detergents: 4561,
-                delicassen: 1036,
-                description: "这是一个以高杂货和洗涤剂/纸消费为特征的客户群体，通常代表超市或便利店。这类客户的特点是日常消费品采购量大，特别是包装食品和日用品。"
-            },
-            { // 聚类簇1
-                name: "餐馆/酒店",
-                fresh: 8800,
-                milk: 1900,
-                grocery: 2400,
-                frozen: 2080,
-                detergents: 352,
-                delicassen: 1170,
-                description: "这是一个以高新鲜食品消费为特征的客户群体，通常代表餐馆、酒店等餐饮企业。这类客户的特点是新鲜食材需求大，但包装食品和日用品需求相对较少。"
-            }
-        ];
-
         // 预测分类函数
         function predictCluster() {
             // 获取输入值
@@ -241,63 +170,25 @@
             const detergents = parseFloat(document.getElementById('detergents').value) || 0;
             const delicassen = parseFloat(document.getElementById('delicassen').value) || 0;
             
-            // 简单的分类逻辑 - 实际应用中这里应该是调用模型API
-            // 这里使用基于洗涤剂/纸和杂货消费量的简单规则
+            // 分类逻辑
             let clusterIndex = 0;
+            let clusterName = "超市";
+            let description = "这是一个以高杂货和洗涤剂/纸消费为特征的客户群体，通常代表超市或便利店。这类客户的特点是日常消费品采购量大，特别是包装食品和日用品。";
+            
             if ((detergents < 1000 && grocery < 5000) || (fresh > 7000 && detergents < 1000)) {
                 clusterIndex = 1;
+                clusterName = "餐馆";
+                description = "这是一个以高新鲜食品消费为特征的客户群体，通常代表餐馆、酒店等餐饮企业。这类客户的特点是新鲜食材需求大，但包装食品和日用品需求相对较少。";
             }
             
             // 显示结果
             document.getElementById('result').style.display = 'block';
-            document.getElementById('cluster-name').textContent = `聚类簇 ${clusterIndex} (${clusterCenters[clusterIndex].name})`;
+            document.getElementById('cluster-name').textContent = `聚类簇 ${clusterIndex} (${clusterName})`;
             
             // 更新聚类信息卡片
             const clusterCard = document.getElementById('cluster-info');
             clusterCard.className = `cluster-card cluster-${clusterIndex}`;
-            document.getElementById('cluster-description').textContent = clusterCenters[clusterIndex].description;
-            
-            // 更新比较表格
-            updateComparisonTable(clusterIndex, fresh, milk, grocery, frozen, detergents, delicassen);
-            
-            // 这里应该添加图表渲染代码，实际应用中可以使用Chart.js等库
-            // renderRadarChart(clusterIndex, fresh, milk, grocery, frozen, detergents, delicassen);
-        }
-        
-        // 更新比较表格
-        function updateComparisonTable(clusterIndex, fresh, milk, grocery, frozen, detergents, delicassen) {
-            const center = clusterCenters[clusterIndex];
-            
-            // 更新客户值
-            document.getElementById('comp-fresh').textContent = fresh;
-            document.getElementById('comp-milk').textContent = milk;
-            document.getElementById('comp-grocery').textContent = grocery;
-            document.getElementById('comp-frozen').textContent = frozen;
-            document.getElementById('comp-detergents').textContent = detergents;
-            document.getElementById('comp-delicassen').textContent = delicassen;
-            
-            // 更新聚类中心值
-            document.getElementById('center-fresh').textContent = center.fresh;
-            document.getElementById('center-milk').textContent = center.milk;
-            document.getElementById('center-grocery').textContent = center.grocery;
-            document.getElementById('center-frozen').textContent = center.frozen;
-            document.getElementById('center-detergents').textContent = center.detergents;
-            document.getElementById('center-delicassen').textContent = center.delicassen;
-            
-            // 计算并更新差异
-            document.getElementById('diff-fresh').textContent = formatDiff(fresh - center.fresh);
-            document.getElementById('diff-milk').textContent = formatDiff(milk - center.milk);
-            document.getElementById('diff-grocery').textContent = formatDiff(grocery - center.grocery);
-            document.getElementById('diff-frozen').textContent = formatDiff(frozen - center.frozen);
-            document.getElementById('diff-detergents').textContent = formatDiff(detergents - center.detergents);
-            document.getElementById('diff-delicassen').textContent = formatDiff(delicassen - center.delicassen);
-        }
-        
-        // 格式化差异显示
-        function formatDiff(diff) {
-            if (diff > 0) return `+${diff}`;
-            if (diff < 0) return `${diff}`;
-            return "0";
+            document.getElementById('cluster-description').textContent = description;
         }
         
         // 重置表单
@@ -310,14 +201,6 @@
             document.getElementById('delicassen').value = '';
             document.getElementById('result').style.display = 'none';
         }
-        
-        // 这里可以添加实际的图表渲染函数
-        // 实际应用中需要引入Chart.js等库
-        /*
-        function renderRadarChart(clusterIndex, fresh, milk, grocery, frozen, detergents, delicassen) {
-            // 图表渲染代码
-        }
-        */
     </script>
 </body>
 </html>
