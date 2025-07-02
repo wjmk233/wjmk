@@ -160,7 +160,7 @@
     </div>
 
     <script>
-        // 预测分类函数
+        // 预测分类函数 - 根据文档中的聚类标准修改
         function predictCluster() {
             // 获取输入值
             const fresh = parseFloat(document.getElementById('fresh').value) || 0;
@@ -170,15 +170,51 @@
             const detergents = parseFloat(document.getElementById('detergents').value) || 0;
             const delicassen = parseFloat(document.getElementById('delicassen').value) || 0;
             
-            // 分类逻辑
-            let clusterIndex = 0;
-            let clusterName = "超市";
-            let description = "这是一个以高杂货和洗涤剂/纸消费为特征的客户群体，通常代表超市或便利店。这类客户的特点是日常消费品采购量大，特别是包装食品和日用品。";
+            // 计算整体均值（基于文档中的分析）
+            const overallMean = {
+                fresh: 12000.30,
+                milk: 5796.27,
+                grocery: 7951.28,
+                frozen: 3071.93,
+                detergents: 2881.49,
+                delicassen: 1524.87
+            };
             
-            if ((detergents < 1000 && grocery < 5000) || (fresh > 7000 && detergents < 1000)) {
+            // 计算各特征相对于整体均值的百分比差异
+            const diffPct = {
+                fresh: ((fresh - overallMean.fresh) / overallMean.fresh) * 100,
+                milk: ((milk - overallMean.milk) / overallMean.milk) * 100,
+                grocery: ((grocery - overallMean.grocery) / overallMean.grocery) * 100,
+                frozen: ((frozen - overallMean.frozen) / overallMean.frozen) * 100,
+                detergents: ((detergents - overallMean.detergents) / overallMean.detergents) * 100,
+                delicassen: ((delicassen - overallMean.delicassen) / overallMean.delicassen) * 100
+            };
+            
+            // 分类逻辑 - 根据文档中的聚类标准
+            let clusterIndex = 0;
+            let clusterName = "高价值客户群(大型零售商)";
+            let description = "这是一个在多个产品类别上消费额显著高于整体均值的客户群体，平均消费额远高于整体平均水平。通常代表大型零售商或批发商。";
+            
+            // 聚类1的判断标准（基础客户群）
+            let significantFeaturesBelow = 0;
+            let significantFeaturesAbove = 0;
+            
+            // 检查每个特征的差异
+            for (const feature in diffPct) {
+                if (Math.abs(diffPct[feature]) > 30) {
+                    if (diffPct[feature] > 0) {
+                        significantFeaturesAbove++;
+                    } else {
+                        significantFeaturesBelow++;
+                    }
+                }
+            }
+            
+            // 如果大多数特征低于整体均值或没有显著高于的特征，则归为聚类1
+            if (significantFeaturesAbove < 2 || significantFeaturesBelow > 3) {
                 clusterIndex = 1;
-                clusterName = "餐馆";
-                description = "这是一个以高新鲜食品消费为特征的客户群体，通常代表餐馆、酒店等餐饮企业。这类客户的特点是新鲜食材需求大，但包装食品和日用品需求相对较少。";
+                clusterName = "基础客户群(小型便利店)";
+                description = "这是一个在大多数产品类别上消费额接近或低于整体均值的客户群体，平均消费额明显低于高价值客户群。通常代表小型便利店或杂货店。";
             }
             
             // 显示结果
