@@ -79,10 +79,10 @@
             border-bottom: 1px solid #eee;
             padding-bottom: 10px;
         }
-        .cluster-0 {
+        .cluster-high-value {
             border-left: 5px solid #3498db;
         }
-        .cluster-1 {
+        .cluster-basic {
             border-left: 5px solid #e74c3c;
         }
         .description {
@@ -95,18 +95,31 @@
             height: 300px;
             margin: 20px 0;
         }
-        .comparison-table {
-            width: 100%;
-            border-collapse: collapse;
+        .error-message {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+        .warning-message {
+            color: #f39c12;
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+        .data-quality-info {
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 10px 15px;
             margin: 15px 0;
         }
-        .comparison-table th, .comparison-table td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
+        .missing-field {
+            background-color: #fff8e1;
+            border-left: 4px solid #ffc107;
         }
-        .comparison-table th {
-            background-color: #f2f2f2;
+        .abnormal-field {
+            background-color: #ffebee;
+            border-left: 4px solid #ef5350;
         }
     </style>
 </head>
@@ -118,27 +131,39 @@
         <div class="input-section">
             <div class="input-group">
                 <label for="fresh">新鲜食品年消费量</label>
-                <input type="number" id="fresh" placeholder="例如: 5000">
+                <input type="number" id="fresh" placeholder="例如: 5000" min="0">
+                <div id="fresh-error" class="error-message">请输入有效的正数</div>
+                <div id="fresh-warning" class="warning-message"></div>
             </div>
             <div class="input-group">
                 <label for="milk">牛奶年消费量</label>
-                <input type="number" id="milk" placeholder="例如: 2000">
+                <input type="number" id="milk" placeholder="例如: 2000" min="0">
+                <div id="milk-error" class="error-message">请输入有效的正数</div>
+                <div id="milk-warning" class="warning-message"></div>
             </div>
             <div class="input-group">
                 <label for="grocery">杂货年消费量</label>
-                <input type="number" id="grocery" placeholder="例如: 3000">
+                <input type="number" id="grocery" placeholder="例如: 3000" min="0">
+                <div id="grocery-error" class="error-message">请输入有效的正数</div>
+                <div id="grocery-warning" class="warning-message"></div>
             </div>
             <div class="input-group">
                 <label for="frozen">冷冻食品年消费量</label>
-                <input type="number" id="frozen" placeholder="例如: 1000">
+                <input type="number" id="frozen" placeholder="例如: 1000" min="0">
+                <div id="frozen-error" class="error-message">请输入有效的正数</div>
+                <div id="frozen-warning" class="warning-message"></div>
             </div>
             <div class="input-group">
                 <label for="detergents">洗涤剂/纸年消费量</label>
-                <input type="number" id="detergents" placeholder="例如: 500">
+                <input type="number" id="detergents" placeholder="例如: 500" min="0">
+                <div id="detergents-error" class="error-message">请输入有效的正数</div>
+                <div id="detergents-warning" class="warning-message"></div>
             </div>
             <div class="input-group">
                 <label for="delicassen">熟食年消费量</label>
-                <input type="number" id="delicassen" placeholder="例如: 800">
+                <input type="number" id="delicassen" placeholder="例如: 800" min="0">
+                <div id="delicassen-error" class="error-message">请输入有效的正数</div>
+                <div id="delicassen-warning" class="warning-message"></div>
             </div>
         </div>
         
@@ -147,10 +172,15 @@
         
         <div id="result" class="result-section">
             <h2>预测结果</h2>
-            <p>该客户被分类为: <strong id="cluster-name">聚类簇 0</strong></p>
+            <p>该客户属于: <strong id="cluster-name">高价值客户群(大型零售商)</strong></p>
             
-            <div id="cluster-info" class="cluster-card cluster-0">
-                <h3>聚类特征分析</h3>
+            <div id="data-quality" class="data-quality-info" style="display: none;">
+                <h3>数据质量信息</h3>
+                <p id="data-quality-message"></p>
+            </div>
+            
+            <div id="cluster-info" class="cluster-card cluster-high-value">
+                <h3>客户特征分析</h3>
                 
                 <div class="description">
                     <p id="cluster-description">这是一个在多个产品类别上消费额显著高于整体均值的客户群体，平均消费额远高于整体平均水平。通常代表大型零售商或批发商。</p>
@@ -160,15 +190,112 @@
     </div>
 
     <script>
-        // 预测分类函数 - 根据文档中的聚类标准修改
+        // 定义各特征的25%和75%分位数
+        const quartiles = {
+            fresh: { q25: 3127.75, q75: 16933.75 },
+            milk: { q25: 1533, q75: 7190.25 },
+            grocery: { q25: 2153, q75: 10655.75 },
+            frozen: { q25: 742.25, q75: 3554.25 },
+            detergents: { q25: 256.75, q75: 3922 },
+            delicassen: { q25: 408.25, q75: 1820.25 }
+        };
+
+        // 预测分类函数
         function predictCluster() {
-            // 获取输入值
-            const fresh = parseFloat(document.getElementById('fresh').value) || 0;
-            const milk = parseFloat(document.getElementById('milk').value) || 0;
-            const grocery = parseFloat(document.getElementById('grocery').value) || 0;
-            const frozen = parseFloat(document.getElementById('frozen').value) || 0;
-            const detergents = parseFloat(document.getElementById('detergents').value) || 0;
-            const delicassen = parseFloat(document.getElementById('delicassen').value) || 0;
+            // 重置所有错误和警告消息
+            resetErrorMessages();
+            
+            // 获取输入值并验证
+            let hasErrors = false;
+            let missingFields = 0;
+            let abnormalValues = 0;
+            
+            const inputs = [
+                {id: 'fresh', name: '新鲜食品'},
+                {id: 'milk', name: '牛奶'},
+                {id: 'grocery', name: '杂货'},
+                {id: 'frozen', name: '冷冻食品'},
+                {id: 'detergents', name: '洗涤剂/纸'},
+                {id: 'delicassen', name: '熟食'}
+            ];
+            
+            const values = {};
+            
+            // 验证输入
+            inputs.forEach(input => {
+                const element = document.getElementById(input.id);
+                const value = element.value.trim();
+                
+                // 检查是否为空
+                if (value === '') {
+                    missingFields++;
+                    element.parentNode.classList.add('missing-field');
+                    showWarning(input.id, '此字段为空，将影响预测准确性');
+                    return; // 跳过这个输入
+                }
+                
+                // 检查是否为有效数字
+                const numValue = parseFloat(value);
+                if (isNaN(numValue) || numValue < 0) {
+                    showError(input.id, '请输入有效的正数');
+                    hasErrors = true;
+                    return;
+                }
+                
+                // 检查异常值（小于25%或大于75%分位数）
+                const q = quartiles[input.id];
+                if (numValue < q.q25 || numValue > q.q75) {
+                    abnormalValues++;
+                    element.parentNode.classList.add('abnormal-field');
+                    let message = '';
+                    if (numValue < q.q25) {
+                        message = `值低于25%分位数(${q.q25})`;
+                    } else {
+                        message = `值高于75%分位数(${q.q75})`;
+                    }
+                    showWarning(input.id, message);
+                }
+                
+                values[input.id] = numValue;
+            });
+            
+            // 如果有验证错误，停止处理
+            if (hasErrors) {
+                alert('请修正表单中的错误后再提交');
+                return;
+            }
+            
+            // 如果有异常值，不进行预测并提示用户
+            if (abnormalValues > 0) {
+                alert(`检测到${abnormalValues}个异常值（小于25%分位数或大于75%分位数），请修正数据后再进行预测`);
+                document.getElementById('result').style.display = 'none';
+                return;
+            }
+            
+            // 如果有缺失字段，提示用户但不补充
+            if (missingFields > 0) {
+                alert(`有${missingFields}个字段缺失，请补充完整数据以获得更准确的预测结果`);
+            }
+            
+            // 准备数据质量信息
+            let dataQualityMessage = '';
+            
+            if (missingFields > 0) {
+                dataQualityMessage += `系统检测到 ${missingFields} 个缺失字段。`;
+            }
+            
+            if (dataQualityMessage) {
+                document.getElementById('data-quality-message').textContent = dataQualityMessage;
+                document.getElementById('data-quality').style.display = 'block';
+            } else {
+                document.getElementById('data-quality').style.display = 'none';
+            }
+            
+            // 如果有缺失字段，不进行预测
+            if (missingFields === inputs.length) {
+                alert('所有字段都缺失，无法进行预测');
+                return;
+            }
             
             // 计算整体均值（基于文档中的分析）
             const overallMean = {
@@ -181,26 +308,29 @@
             };
             
             // 计算各特征相对于整体均值的百分比差异
+            // 对于缺失字段，使用0（中性值）
             const diffPct = {
-                fresh: ((fresh - overallMean.fresh) / overallMean.fresh) * 100,
-                milk: ((milk - overallMean.milk) / overallMean.milk) * 100,
-                grocery: ((grocery - overallMean.grocery) / overallMean.grocery) * 100,
-                frozen: ((frozen - overallMean.frozen) / overallMean.frozen) * 100,
-                detergents: ((detergents - overallMean.detergents) / overallMean.detergents) * 100,
-                delicassen: ((delicassen - overallMean.delicassen) / overallMean.delicassen) * 100
+                fresh: values.fresh ? ((values.fresh - overallMean.fresh) / overallMean.fresh) * 100 : 0,
+                milk: values.milk ? ((values.milk - overallMean.milk) / overallMean.milk) * 100 : 0,
+                grocery: values.grocery ? ((values.grocery - overallMean.grocery) / overallMean.grocery) * 100 : 0,
+                frozen: values.frozen ? ((values.frozen - overallMean.frozen) / overallMean.frozen) * 100 : 0,
+                detergents: values.detergents ? ((values.detergents - overallMean.detergents) / overallMean.detergents) * 100 : 0,
+                delicassen: values.delicassen ? ((values.delicassen - overallMean.delicassen) / overallMean.delicassen) * 100 : 0
             };
             
             // 分类逻辑 - 根据文档中的聚类标准
-            let clusterIndex = 0;
             let clusterName = "高价值客户群(大型零售商)";
             let description = "这是一个在多个产品类别上消费额显著高于整体均值的客户群体，平均消费额远高于整体平均水平。通常代表大型零售商或批发商。";
+            let clusterClass = "cluster-high-value";
             
             // 聚类1的判断标准（基础客户群）
             let significantFeaturesBelow = 0;
             let significantFeaturesAbove = 0;
             
-            // 检查每个特征的差异
+            // 检查每个特征的差异（忽略缺失字段）
             for (const feature in diffPct) {
+                if (!values[feature]) continue; // 跳过缺失字段
+                
                 if (Math.abs(diffPct[feature]) > 30) {
                     if (diffPct[feature] > 0) {
                         significantFeaturesAbove++;
@@ -212,19 +342,59 @@
             
             // 如果大多数特征低于整体均值或没有显著高于的特征，则归为聚类1
             if (significantFeaturesAbove < 2 || significantFeaturesBelow > 3) {
-                clusterIndex = 1;
                 clusterName = "基础客户群(小型便利店)";
                 description = "这是一个在大多数产品类别上消费额接近或低于整体均值的客户群体，平均消费额明显低于高价值客户群。通常代表小型便利店或杂货店。";
+                clusterClass = "cluster-basic";
             }
             
             // 显示结果
             document.getElementById('result').style.display = 'block';
-            document.getElementById('cluster-name').textContent = `聚类簇 ${clusterIndex} (${clusterName})`;
+            document.getElementById('cluster-name').textContent = clusterName;
             
             // 更新聚类信息卡片
             const clusterCard = document.getElementById('cluster-info');
-            clusterCard.className = `cluster-card cluster-${clusterIndex}`;
+            clusterCard.className = `cluster-card ${clusterClass}`;
             document.getElementById('cluster-description').textContent = description;
+            
+            // 如果有缺失字段，在结果中添加说明
+            if (missingFields > 0) {
+                description += " 注意：此预测基于不完整数据，部分字段缺失。";
+                document.getElementById('cluster-description').textContent = description;
+            }
+        }
+        
+        // 显示错误消息
+        function showError(fieldId, message) {
+            const errorElement = document.getElementById(`${fieldId}-error`);
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            document.getElementById(fieldId).style.borderColor = '#e74c3c';
+        }
+        
+        // 显示警告消息
+        function showWarning(fieldId, message) {
+            const warningElement = document.getElementById(`${fieldId}-warning`);
+            warningElement.textContent = message;
+            warningElement.style.display = 'block';
+            document.getElementById(fieldId).style.borderColor = '#f39c12';
+        }
+        
+        // 重置所有错误消息
+        function resetErrorMessages() {
+            // 重置错误和警告消息
+            const errorMessages = document.querySelectorAll('.error-message, .warning-message');
+            errorMessages.forEach(msg => {
+                msg.style.display = 'none';
+                msg.textContent = '';
+            });
+            
+            // 重置输入框样式
+            const inputs = document.querySelectorAll('input');
+            inputs.forEach(input => {
+                input.style.borderColor = '#ddd';
+                input.parentNode.classList.remove('missing-field');
+                input.parentNode.classList.remove('abnormal-field');
+            });
         }
         
         // 重置表单
@@ -236,6 +406,8 @@
             document.getElementById('detergents').value = '';
             document.getElementById('delicassen').value = '';
             document.getElementById('result').style.display = 'none';
+            document.getElementById('data-quality').style.display = 'none';
+            resetErrorMessages();
         }
     </script>
 </body>
