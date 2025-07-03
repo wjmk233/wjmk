@@ -230,7 +230,7 @@
                 if (value === '') {
                     missingFields++;
                     element.parentNode.classList.add('missing-field');
-                    showWarning(input.id, '此字段为空，将影响预测准确性');
+                    showWarning(input.id, '此特征为空，将影响预测准确性');
                     return; // 跳过这个输入
                 }
                 
@@ -274,14 +274,14 @@
             
             // 如果有缺失字段，提示用户但不补充
             if (missingFields > 0) {
-                alert(`有${missingFields}个字段缺失，请补充完整数据以获得更准确的预测结果`);
+                alert(`有${missingFields}个特征缺失，请补充完整数据以获得更准确的预测结果`);
             }
             
             // 准备数据质量信息
             let dataQualityMessage = '';
             
             if (missingFields > 0) {
-                dataQualityMessage += `系统检测到 ${missingFields} 个缺失字段。`;
+                dataQualityMessage += `系统检测到 ${missingFields} 个缺失特征。`;
             }
             
             if (dataQualityMessage) {
@@ -293,7 +293,7 @@
             
             // 如果有缺失字段，不进行预测
             if (missingFields === inputs.length) {
-                alert('所有字段都缺失，无法进行预测');
+                alert('所有特征都缺失，无法进行预测');
                 return;
             }
             
@@ -358,7 +358,7 @@
             
             // 如果有缺失字段，在结果中添加说明
             if (missingFields > 0) {
-                description += " 注意：此预测基于不完整数据，部分字段缺失。";
+                description += " 注意：此预测基于不完整数据，部分特征缺失。";
                 document.getElementById('cluster-description').textContent = description;
             }
         }
